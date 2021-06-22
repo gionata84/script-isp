@@ -1,4 +1,4 @@
 /tmp*
 project_venv/
 .idea/
-/target
+/target*
