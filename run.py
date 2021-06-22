@@ -14,12 +14,12 @@ def main(argv):
         execute(filename)
 
 
-def execute(filename):
-    target_folder = 'target/' + os.path.splitext(filename)[0]
+def execute(config_file):
+    target_folder = 'target/' + os.path.splitext(config_file)[0]
     os.makedirs(target_folder)
-    values = build_phs(filename)
+    values = build_phs(config_file)
     for filename in os.listdir(folder_common):
-        if filename.endswith(".yml"):
+        if filename.endswith(".yml") or filename.endswith(".yaml"):
             with open(folder_common + '/' + filename, 'r') as instream:
                 content = instream.read()
                 content = re.sub("\${(.*?)}", replace_var(values), content)
