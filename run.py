@@ -6,22 +6,32 @@ import os
 import re
 
 folder_common = 'tmp_common'
+target_repo = 'target_repo/'
 
 
 def main(argv):
     os.makedirs(folder_common)
     master = git.Repo.clone_from('https://github.com/gionata84/demo-common.git', folder_common, branch='main')
     master.close()
-    for filename in os.listdir(folder_common + '/configurations'):
-        execute(filename)
+    for config_file in os.listdir(folder_common + '/configurations'):
+        #create tmp folder target
+        execute(config_file)
 
-    os.makedirs('target_repo/dev')
-    repo = git.Repo.clone_from('https://gionata84:Arancia0!@github.com/gionata84/foo.git', 'target_repo/dev')
-    move_files('target/dev', 'target_repo/dev')
-    repo.git.add(all=True)
-    repo.index.commit('first')
-    origin = repo.remote(name='origin')
-    origin.push()
+        #create final folder target
+        env = os.path.splitext(config_file)[0]
+        os.makedirs(target_repo + env)
+        repo = git.Repo.clone_from('https://gionata84:Arancia0!@github.com/gionata84/foo.git', target_repo + env)
+
+        #move file form tmp to final
+        move_files('target/' + env, target_repo + env)
+
+        #add, create branch and push
+        repo.git.checkout('HEAD', b=env)
+        repo.git.add(all=True)
+        repo.index.commit('start ' + env)
+        origin = repo.remote(name='origin')
+        repo.git.push("--set-upstream", origin, repo.head.ref)
+        origin.push()
 
 
 def move_files(source_dir, target_dir):
