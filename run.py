@@ -6,32 +6,46 @@ import os
 import re
 
 folder_common = 'tmp_common'
-target_repo = 'target_repo/'
+folder_target = 'target_repo/tmp'
 
 
 def main(argv):
     os.makedirs(folder_common)
-    master = git.Repo.clone_from('https://github.com/gionata84/demo-common.git', folder_common, branch='main')
-    master.close()
+    common_repo = git.Repo.clone_from('https://github.com/gionata84/demo-common.git', folder_common, branch='main')
+    common_repo.close()
+
+    os.makedirs(folder_target)
+    target_repo = git.Repo.clone_from('https://gionata84:Arancia0!@github.com/gionata84/foo.git', folder_target, branch='main')
+
     for config_file in os.listdir(folder_common + '/configurations'):
-        #create tmp folder target
-        execute(config_file)
-
-        #create final folder target
-        env = os.path.splitext(config_file)[0]
-        os.makedirs(target_repo + env)
-        repo = git.Repo.clone_from('https://gionata84:Arancia0!@github.com/gionata84/foo.git', target_repo + env)
-
-        #move file form tmp to final
-        move_files('target/' + env, target_repo + env)
+        values = build_phs(config_file)
+        for filename in os.listdir(folder_common):
+            if filename.endswith(".yml") or filename.endswith(".yaml"):
+                with open(folder_common + '/' + filename, 'r') as instream:
+                    content = instream.read()
+                    content = re.sub("\${(.*?)}", replace_var(values), content)
+                    outF = open(folder_target + "/" + filename, "w")
+                    outF.write(content)
+                    outF.close()
 
         #add, create branch and push
-        repo.git.checkout('HEAD', b=env)
-        repo.git.add(all=True)
-        repo.index.commit('start ' + env)
-        origin = repo.remote(name='origin')
-        repo.git.push("--set-upstream", origin, repo.head.ref)
+        env = os.path.splitext(config_file)[0]
+        target_repo.git.checkout('HEAD', b=env)
+        target_repo.git.add(all=True)
+        target_repo.index.commit('start ' + env)
+        origin = target_repo.remote(name='origin')
+        target_repo.git.push("--set-upstream", origin, target_repo.head.ref)
         origin.push()
+        clean_folder()
+
+    clean_folder()
+    target_repo.close()
+
+
+def clean_folder():
+    for item in folder_target:
+        if item.endswith(".yml") or item.endswith(".yaml"):
+            os.remove(os.path.join(folder_target, item))
 
 
 def move_files(source_dir, target_dir):
@@ -42,20 +56,6 @@ def move_files(source_dir, target_dir):
         name, extension = os.path.splitext(file_name)
         if extension in touple:
             shutil.move(os.path.join(source_dir, file_name), target_dir)
-
-
-def execute(config_file):
-    target_folder = 'target/' + os.path.splitext(config_file)[0]
-    os.makedirs(target_folder)
-    values = build_phs(config_file)
-    for filename in os.listdir(folder_common):
-        if filename.endswith(".yml") or filename.endswith(".yaml"):
-            with open(folder_common + '/' + filename, 'r') as instream:
-                content = instream.read()
-                content = re.sub("\${(.*?)}", replace_var(values), content)
-                outF = open(target_folder + "/" + filename, "w")
-                outF.write(content)
-                outF.close()
 
 
 def replace_var(values):
